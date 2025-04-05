@@ -1,82 +1,133 @@
-'use client';
-
-import { useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { v4 as uuidv4, validate as validateUUID } from 'uuid';
+"use client";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { v4 as uuidv4, validate as validateUUID } from "uuid";
+import { motion } from "framer-motion";
 
 export default function JoinPage() {
-    const [username, setUsername] = useState('');
-    const [groupId, setGroupId] = useState('');
-    const [error, setError] = useState('');
+  const [groupId, setGroupId] = useState("");
+  const [username, setUsername] = useState("");
+  const [hasCreatedGroup, setHasCreatedGroup] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
-    const usernameRef = useRef<HTMLInputElement>(null);
-    const groupIdRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const storedGroupId = localStorage.getItem("userGroupId");
+    if (storedGroupId && validateUUID(storedGroupId)) {
+      setGroupId(storedGroupId);
+      setHasCreatedGroup(true);
+    }
+  }, []);
 
-    function createGroupId() {
-        const newGroupId = uuidv4();
-        if (groupIdRef.current) {
-            groupIdRef.current.value = newGroupId;
-        }
-        // localStorage.setItem('groupId', newGroupId);
+  const handleJoin = () => {
+    if (!validateUUID(groupId)) {
+      setError("Please enter a valid group ID.");
+      return;
     }
 
-    const router = useRouter();
-
-    function handleJoinGroup() {
-        if (username.trim().length < 3) {
-            setError('Name should be at least 3 characters long');
-        }
-
-        if (!validateUUID(groupId)) {
-            setError('Please enter a valid group Id');
-        }
-
-        setUsername(usernameRef.current ? usernameRef.current.value : '');
-        setGroupId(groupIdRef.current ? groupIdRef.current.value : '');
-        console.log('funct');
-
-        console.log(username, groupId);
-
-        router.push(
-            `/chat/${groupIdRef.current?.value}?username=${encodeURIComponent(
-                usernameRef.current?.value ?? ''
-            )}`
-            // `/chat/${groupId}?username=${encodeURIComponent(username)}`
-        );
+    if (username.trim().length < 3) {
+      setError("Username must be at least 3 characters.");
+      return;
     }
-    console.log('global');
 
-    return (
-        <div>
-            <div>
-                {/* Dynamic Name : TODO */}
-                <h1>Join Group Chat</h1>
+    router.push(`/chat/${groupId}?username=${encodeURIComponent(username)}`);
+  };
 
-                <div>
-                    {/* Name */}
-                    <div>
-                        <label htmlFor="name">Enter name</label>
-                        <input
-                            type="text"
-                            id="name"
-                            placeholder="Adarsh Goel"
-                            minLength={3}
-                            ref={usernameRef}
-                        />
-                    </div>
+  const createNewGroup = () => {
+    const newGroupId = uuidv4();
+    setGroupId(newGroupId);
+    localStorage.setItem("userGroupId", newGroupId);
+    setHasCreatedGroup(true);
+    setError(null);
+  };
 
-                    {/* Group Id */}
-                    <div>
-                        <label htmlFor="groupId">Enter Group Id</label>
-                        <div>
-                            <input type="text" id="groupId" ref={groupIdRef} />
-                            <button onClick={createGroupId}>New</button>
-                        </div>
-                    </div>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
+      <motion.div
+        className="bg-white p-8 rounded-xl shadow-2xl w-96"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <h1 className="text-3xl font-bold text-center mb-8 text-gray-800">
+          {hasCreatedGroup ? "Your Group" : "Join Group Chat"}
+        </h1>
 
-                    <button onClick={handleJoinGroup}>Join group</button>
-                </div>
+        {error && (
+          <motion.div
+            className="mb-4 p-3 bg-red-100 text-red-800 rounded-lg"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            {error}
+          </motion.div>
+        )}
+
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Your Name
+            </label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter your name"
+              minLength={3}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Group ID
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={groupId}
+                onChange={(e) => setGroupId(e.target.value)}
+                className="flex-1 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter group ID"
+                pattern="[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
+                readOnly={hasCreatedGroup}
+              />
+              <button
+                onClick={createNewGroup}
+                className={`px-4 ${
+                  hasCreatedGroup
+                    ? "bg-gray-300 cursor-not-allowed"
+                    : "bg-gray-100 hover:bg-gray-200"
+                } rounded-lg transition-colors`}
+                disabled={hasCreatedGroup}
+              >
+                New
+              </button>
             </div>
+          </div>
+
+          <button
+            onClick={handleJoin}
+            className="w-full py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            {hasCreatedGroup ? "Join Your Group" : "Join Group"}
+          </button>
+
+          {hasCreatedGroup && (
+            <button
+              onClick={() => {
+                localStorage.removeItem("userGroupId");
+                setHasCreatedGroup(false);
+                setGroupId("");
+              }}
+              className="w-full py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+            >
+              Leave Group
+            </button>
+          )}
         </div>
-    );
+      </motion.div>
+    </div>
+  );
 }

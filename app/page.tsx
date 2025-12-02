@@ -52,7 +52,7 @@ export default function Welcome() {
           animate={{ opacity: 1 }}
           transition={{ delay: 2.5, duration: 1 }}
         >
-          <Link href="/Join">Get Started</Link>
+          <Link href="/join">Get Started</Link>
         </motion.button>
       </motion.div>
     </div>
